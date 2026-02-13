@@ -9,7 +9,7 @@ import MathPage from "./pages/Math";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/interactive/">
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
