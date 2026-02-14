@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
@@ -62,7 +62,18 @@ export function AuthProvider({ children }) {
     setLeadData(data);
   }
 
-  const value = { user, leadData, isLeadComplete, saveLead, loading };
+  async function saveSurveyResponse(wouldPay) {
+    if (!user) return;
+    const leadRef = doc(db, "leads", user.uid);
+    await updateDoc(leadRef, {
+      wouldPay,
+      surveyRespondedAt: serverTimestamp(),
+    });
+    setLeadData((prev) => ({ ...prev, wouldPay, surveyRespondedAt: new Date() }));
+  }
+
+  const surveyCompleted = leadData?.wouldPay != null;
+  const value = { user, leadData, isLeadComplete, saveLead, saveSurveyResponse, surveyCompleted, loading };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
