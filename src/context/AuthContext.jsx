@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -9,19 +9,26 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-function getUtmParams() {
+function captureUtmParams() {
   const params = new URLSearchParams(window.location.search);
-  return {
+  const utm = {
     utmSource: params.get("utm_source") || null,
     utmMedium: params.get("utm_medium") || null,
     utmCampaign: params.get("utm_campaign") || null,
   };
+  if (utm.utmSource || utm.utmMedium || utm.utmCampaign) {
+    sessionStorage.setItem("utm_params", JSON.stringify(utm));
+    return utm;
+  }
+  const stored = sessionStorage.getItem("utm_params");
+  return stored ? JSON.parse(stored) : utm;
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [leadData, setLeadData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const utmParams = useRef(captureUtmParams());
 
   const isLeadComplete = !!leadData?.nombre;
 
@@ -44,11 +51,11 @@ export function AuthProvider({ children }) {
 
   async function saveLead(formData) {
     if (!user) return;
-    const utmParams = getUtmParams();
+    const utm = utmParams.current;
     const leadRef = doc(db, "leads", user.uid);
     const data = {
       ...formData,
-      ...utmParams,
+      ...utm,
       createdAt: serverTimestamp(),
     };
     await setDoc(leadRef, data);
