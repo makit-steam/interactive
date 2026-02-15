@@ -70,16 +70,24 @@ export function AuthProvider({ children }) {
     setLeadData((prev) => ({ ...prev, ...data }));
   }
 
-  async function saveSurveyResponse(wouldPay, reason) {
+  async function saveSurveyResponse(wouldPay, reason, wouldRecommend) {
     if (!user) return;
     const leadRef = doc(db, "leads", user.uid);
     const data = {
       wouldPay,
       surveyRespondedAt: serverTimestamp(),
     };
-    if (reason) data.subscriptionReason = reason;
+    if (reason && wouldPay) data.subscriptionReason = reason;
+    if (reason && !wouldPay) data.rejectionReason = reason;
+    if (wouldRecommend != null) data.wouldRecommend = wouldRecommend;
     await updateDoc(leadRef, data);
-    setLeadData((prev) => ({ ...prev, wouldPay, subscriptionReason: reason, surveyRespondedAt: new Date() }));
+    setLeadData((prev) => ({
+      ...prev,
+      wouldPay,
+      ...(wouldPay ? { subscriptionReason: reason } : { rejectionReason: reason }),
+      ...(wouldRecommend != null ? { wouldRecommend } : {}),
+      surveyRespondedAt: new Date(),
+    }));
   }
 
   const surveyCompleted = leadData?.wouldPay != null;
