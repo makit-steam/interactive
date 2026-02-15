@@ -40,6 +40,14 @@ export function AuthProvider({ children }) {
         const leadSnap = await getDoc(leadRef);
         if (leadSnap.exists()) {
           setLeadData(leadSnap.data());
+        } else {
+          const utm = utmParams.current;
+          const visitData = {
+            ...utm,
+            visitedAt: serverTimestamp(),
+          };
+          await setDoc(leadRef, visitData);
+          setLeadData(visitData);
         }
       } else {
         await signInAnonymously(auth);
@@ -58,8 +66,8 @@ export function AuthProvider({ children }) {
       ...utm,
       createdAt: serverTimestamp(),
     };
-    await setDoc(leadRef, data);
-    setLeadData(data);
+    await setDoc(leadRef, data, { merge: true });
+    setLeadData((prev) => ({ ...prev, ...data }));
   }
 
   async function saveSurveyResponse(wouldPay) {
